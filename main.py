@@ -113,13 +113,8 @@ async def main(*args):
         for article_url in text_articles:
             await process.spawn(process_article, article_url, morph)
 
-    for article in articles_data:
-        print(f'status: {article["status"]}')
-        print(f'score: {article["score"]}')
-        print(f'words count: {article["words_count"]}')
-        print('\n')
-
 
 if __name__=='__main__':
     run(main)
+
 
