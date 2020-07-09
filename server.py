@@ -14,6 +14,7 @@ async def handle(request):
     response = main.articles_data
     return web.json_response(response)
 
+
 app = web.Application()
 app.add_routes([web.get('/', handle)])
 
