@@ -64,7 +64,7 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def  process_article(url,process_max_time=3):
+async def  process_article(url,processed_max_time=3):
     article_info = {
         'status': None,
         'url': url,
@@ -74,7 +74,7 @@ async def  process_article(url,process_max_time=3):
     async with aiohttp.ClientSession() as session:
         with managed_time_processs() as timer_process:
             try:
-                async with timeout(process_max_time) as cm:
+                async with timeout(processed_max_time) as cm:
                     html = await fetch(session, url)
                     sanitized_html = sanitize(html)
                     article_words = await text_tools.split_by_words(morph, sanitized_html)
@@ -104,7 +104,7 @@ def test_process_article():
     asyncio.run(process_article('https://lenta.ru/articles/2020/07/04/zahvat/'))
     assert 'PARSING_ERROR' == articles_data[1]['status']
 
-    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html', process_max_time=1))
+    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html', processed_max_time=1))
     assert 'TIMEOUT' == articles_data[2]['status']
 
 
