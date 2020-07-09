@@ -16,14 +16,9 @@ from enum import Enum
 
 
 logger = logging.getLogger('time_log')
+
 articles_data = []
-TEXT_ARTICLES = [
-    'https://inosmi.ru/politic/20200704/247701497.html',
-    'https://lenta.ru/articles/2020/07/04/zahvat/',
-    'https://inosmi.ru/social/20200704/247680141',
-    'https://inosmi.ru/social/20200704/247697320.html',
-    'https://inosmi.ru/military/20200704/247668031.html'
-    ]
+morph = pymorphy2.MorphAnalyzer()
 CHARGED_WORDS_FILE = 'negative_words.txt'
 
 
@@ -69,7 +64,7 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def  process_article(url,morph):
+async def  process_article(url,process_max_time=3):
     article_info = {
         'status': None,
         'url': url,
@@ -79,10 +74,11 @@ async def  process_article(url,morph):
     async with aiohttp.ClientSession() as session:
         with managed_time_processs() as timer_process:
             try:
-                async with timeout(5) as cm:
+                async with timeout(process_max_time) as cm:
                     html = await fetch(session, url)
                     sanitized_html = sanitize(html)
-                    article_words = text_tools.split_by_words(morph, sanitized_html)
+                    article_words = await text_tools.split_by_words(morph, sanitized_html)
+                    print(article_words)
                     charged_words = fetch_charged_words(CHARGED_WORDS_FILE)
                     article_info['status'] = ProcessingStatus.OK.value
                     article_info['words_count'] = len(article_words)
@@ -101,20 +97,25 @@ async def  process_article(url,morph):
         articles_data.append(article_info)
 
 
+def test_process_article():
+    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html'))
+    assert  'OK' == articles_data[0]['status']
 
+    asyncio.run(process_article('https://lenta.ru/articles/2020/07/04/zahvat/'))
+    assert 'PARSING_ERROR' == articles_data[1]['status']
 
+    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html', process_max_time=1))
+    assert 'TIMEOUT' == articles_data[2]['status']
 
 
 async def main(*args):
     logging.basicConfig(level=logging.INFO)
     text_articles = args
-    morph = pymorphy2.MorphAnalyzer()
+
     async with create_task_group() as process:
         for article_url in text_articles:
-            await process.spawn(process_article, article_url, morph)
+            await process.spawn(process_article, article_url)
 
 
 if __name__=='__main__':
     run(main)
-
-
