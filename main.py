@@ -3,9 +3,7 @@ import asyncio
 
 import logging
 import time
-from urllib.parse import urlparse
 from async_timeout import timeout
-import requests
 from contextlib import contextmanager
 from adapters.inosmi_ru import sanitize
 import adapters
@@ -16,13 +14,6 @@ from enum import Enum
 
 
 logger = logging.getLogger('time_log')
-TEXT_ARTICLES = [
-    'https://inosmi.ru/politic/20200704/247701497.html',
-    'https://lenta.ru/articles/2020/07/04/zahvat/',
-    'https://inosmi.ru/social/20200704/247680141',
-    'https://inosmi.ru/social/20200704/247697320.html',
-    'https://inosmi.ru/military/20200704/247668031.html'
-    ]
 
 articles_data = []
 morph = pymorphy2.MorphAnalyzer()
@@ -47,15 +38,14 @@ def managed_time_processs():
         logger.info(f'The result for: {round(result_time,2)}s.')
 
 
-def get_website_name(url):
-    response_url = requests.get(url).url
-    parse_result = urlparse(response_url)
-    website_name = parse_result.netloc
-    # result = re.findall(r'//\w+.\w+', response_url)
-    # converted_host = result[0].replace('//','')
-    # website_name = converted_host
-    if not website_name in adapters.SANITIZERS:
-        return website_name
+async def get_website_name(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url,ssl=False) as response:
+            response.raise_for_status()
+            response_url = response.url
+            website_name = response_url.host
+            if not website_name in adapters.SANITIZERS:
+                return website_name
 
 
 def fetch_charged_words(text_file):
@@ -94,7 +84,8 @@ async def  process_article(url,processed_max_time=3):
 
             except adapters.ArticleNotFound:
                 article_info['status'] = ProcessingStatus.PARSING_ERROR.value
-                article_info['url'] = f'The article on {get_website_name(url)}'
+                website_name = await get_website_name(url)
+                article_info['url'] = f'The article on {website_name}'
 
             except asyncio.TimeoutError:
                 article_info['status'] = ProcessingStatus.TIMEOUT.value
@@ -121,10 +112,9 @@ async def get_analysis_process(*args):
     text_articles = args
 
     async with create_task_group() as process:
-        for article_url in TEXT_ARTICLES:
+        for article_url in text_articles:
             await process.spawn(process_article, article_url)
-    for article in articles_data:
-        print(article['status'])
+
 
 if __name__=='__main__':
     run(get_analysis_process)
