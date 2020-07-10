@@ -10,7 +10,7 @@ async def handle(request):
         error_response = {"error": "too many urls in request, should be 10 or less"}
         return web.json_response(error_response,status=400)
 
-    await main.main(*clean_urls)
+    await main.get_analysis_process(*clean_urls)
     response = main.articles_data
     return web.json_response(response)
 
