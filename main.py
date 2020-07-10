@@ -94,7 +94,7 @@ async def  process_article(url,processed_max_time=3):
 
             except adapters.ArticleNotFound:
                 article_info['status'] = ProcessingStatus.PARSING_ERROR.value
-                article_info['url'] = f'The artciel on {get_website_name(url)}'
+                article_info['url'] = f'The article on {get_website_name(url)}'
 
             except asyncio.TimeoutError:
                 article_info['status'] = ProcessingStatus.TIMEOUT.value
