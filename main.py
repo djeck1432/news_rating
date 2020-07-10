@@ -3,7 +3,7 @@ import asyncio
 
 import logging
 import time
-import re
+from urllib.parse import urlparse
 from async_timeout import timeout
 import requests
 from contextlib import contextmanager
@@ -16,6 +16,13 @@ from enum import Enum
 
 
 logger = logging.getLogger('time_log')
+TEXT_ARTICLES = [
+    'https://inosmi.ru/politic/20200704/247701497.html',
+    'https://lenta.ru/articles/2020/07/04/zahvat/',
+    'https://inosmi.ru/social/20200704/247680141',
+    'https://inosmi.ru/social/20200704/247697320.html',
+    'https://inosmi.ru/military/20200704/247668031.html'
+    ]
 
 articles_data = []
 morph = pymorphy2.MorphAnalyzer()
@@ -42,9 +49,11 @@ def managed_time_processs():
 
 def get_website_name(url):
     response_url = requests.get(url).url
-    result = re.findall(r'//\w+.\w+', response_url)
-    converted_host = result[0].replace('//','')
-    website_name = converted_host
+    parse_result = urlparse(response_url)
+    website_name = parse_result.netloc
+    # result = re.findall(r'//\w+.\w+', response_url)
+    # converted_host = result[0].replace('//','')
+    # website_name = converted_host
     if not website_name in adapters.SANITIZERS:
         return website_name
 
@@ -78,7 +87,6 @@ async def  process_article(url,processed_max_time=3):
                     html = await fetch(session, url)
                     sanitized_html = sanitize(html)
                     article_words = await text_tools.split_by_words(morph, sanitized_html)
-                    print(article_words)
                     charged_words = fetch_charged_words(CHARGED_WORDS_FILE)
                     article_info['status'] = ProcessingStatus.OK.value
                     article_info['words_count'] = len(article_words)
@@ -108,14 +116,15 @@ def test_process_article():
     assert 'TIMEOUT' == articles_data[2]['status']
 
 
-async def main(*args):
+async def get_analysis_process(*args):
     logging.basicConfig(level=logging.INFO)
     text_articles = args
 
     async with create_task_group() as process:
-        for article_url in text_articles:
+        for article_url in TEXT_ARTICLES:
             await process.spawn(process_article, article_url)
-
+    for article in articles_data:
+        print(article['status'])
 
 if __name__=='__main__':
-    run(main)
+    run(get_analysis_process)
