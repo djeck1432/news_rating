@@ -53,7 +53,7 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def  process_article(url,processed_max_time=3):
+async def  process_article(url,queue,processed_max_time=3):
     article_info = {
         'status': None,
         'url': url,
@@ -82,7 +82,7 @@ async def  process_article(url,processed_max_time=3):
             except aiohttp.ClientResponseError:
                 article_info['status'] = ProcessingStatus.FETCH_ERROR.value
 
-        articles_data.append(article_info)
+        queue.put_nowait(article_info)
 
 
 def test_process_article():
@@ -96,13 +96,13 @@ def test_process_article():
     assert 'TIMEOUT' == articles_data[2]['status']
 
 
-async def get_analysis_process(*args):
+async def get_analysis_process(article_queue,*args,):
     logging.basicConfig(level=logging.INFO)
     text_articles = args
 
     async with create_task_group() as process:
         for article_url in text_articles:
-            await process.spawn(process_article, article_url)
+            await process.spawn(process_article, article_url,article_queue)
 
 
 if __name__=='__main__':
