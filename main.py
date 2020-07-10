@@ -38,16 +38,6 @@ def managed_time_processs():
         logger.info(f'The result for: {round(result_time,2)}s.')
 
 
-async def get_website_name(url):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url,ssl=False) as response:
-            response.raise_for_status()
-            response_url = response.url
-            website_name = response_url.host
-            if not website_name in adapters.SANITIZERS:
-                return website_name
-
-
 def fetch_charged_words(text_file):
     charged_words = []
     with open(text_file, 'r') as special_words:
@@ -84,8 +74,7 @@ async def  process_article(url,processed_max_time=3):
 
             except adapters.ArticleNotFound:
                 article_info['status'] = ProcessingStatus.PARSING_ERROR.value
-                website_name = await get_website_name(url)
-                article_info['url'] = f'The article on {website_name}'
+                article_info['url'] = f'The article on {url}'
 
             except asyncio.TimeoutError:
                 article_info['status'] = ProcessingStatus.TIMEOUT.value
