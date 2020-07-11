@@ -14,8 +14,6 @@ from enum import Enum
 
 
 logger = logging.getLogger('time_log')
-
-articles_data = []
 morph = pymorphy2.MorphAnalyzer()
 CHARGED_WORDS_FILE = 'negative_words.txt'
 
@@ -53,7 +51,7 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def  process_article(url,queue,processed_max_time=3):
+async def  process_article(url,articles_data,processed_max_time=3):
     article_info = {
         'status': None,
         'url': url,
@@ -81,28 +79,31 @@ async def  process_article(url,queue,processed_max_time=3):
             except aiohttp.ClientResponseError:
                 article_info['status'] = ProcessingStatus.FETCH_ERROR.value
 
-        queue.put_nowait(article_info)
+        articles_data.append(article_info)
 
 
 def test_process_article():
-    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html'))
+    articles_data = []
+    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html',articles_data))
     assert  'OK' == articles_data[0]['status']
 
-    asyncio.run(process_article('https://lenta.ru/articles/2020/07/04/zahvat/'))
+    asyncio.run(process_article('https://lenta.ru/articles/2020/07/04/zahvat/',articles_data))
     assert 'PARSING_ERROR' == articles_data[1]['status']
 
-    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html', processed_max_time=1))
+    asyncio.run(process_article('https://inosmi.ru/social/20200708/247723129.html',articles_data, processed_max_time=0.1))
     assert 'TIMEOUT' == articles_data[2]['status']
 
 
-async def get_analysis_process(article_queue,*args,):
-    logging.basicConfig(level=logging.INFO)
+async def get_analysis_process(articles_data,*args):
     text_articles = args
 
     async with create_task_group() as process:
         for article_url in text_articles:
-            await process.spawn(process_article, article_url,article_queue)
+            await process.spawn(process_article, article_url,articles_data)
+
+    return articles_data
 
 
 if __name__=='__main__':
+    logging.basicConfig(level=logging.INFO)
     run(get_analysis_process)
