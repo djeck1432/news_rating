@@ -11,8 +11,8 @@ async def handle(request):
         return web.json_response(error_response,status=400)
 
     articles_data = []
-    response = await main.get_analysis_process(articles_data,*clean_urls)
-    return web.json_response(response)
+    await main.get_analysis_process(articles_data,*clean_urls)
+    return web.json_response(articles_data)
 
 
 app = web.Application()
