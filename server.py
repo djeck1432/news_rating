@@ -1,6 +1,5 @@
 import main
 from aiohttp import web
-import asyncio
 
 
 async def handle(request):
@@ -11,9 +10,8 @@ async def handle(request):
         error_response = {"error": "too many urls in request, should be 10 or less"}
         return web.json_response(error_response,status=400)
 
-    article_queue = asyncio.Queue()
-    await main.get_analysis_process(article_queue,*clean_urls,)
-    response = await article_queue.get()
+    articles_data = []
+    response = await main.get_analysis_process(articles_data,*clean_urls)
     return web.json_response(response)
 
 
